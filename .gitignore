@@ -1,0 +1,5 @@
+build/
+build-bench/
+build-test/
+compile_commands.json
+.cache
