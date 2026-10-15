@@ -9,8 +9,6 @@
 
 class Order{
     public:
-        // `stopPrice` only applies to STOP/STOP_LIMIT (the trigger price); it defaults to
-        // the market sentinel, meaning "no trigger", which is correct for every other type.
         Order(OrderType orderType, OrderId orderId, Side side, Price price, Quantity qty, TimeInForce timeInForce, Price stopPrice = Constants::InvalidPrice)
             : orderType{orderType}
             , orderId{orderId}
@@ -45,8 +43,6 @@ class Order{
                         }
                         break;
                     case OrderType::STOP:
-                        // A stop order becomes a MARKET order once triggered, so it has no
-                        // limit price of its own — only the trigger (stop) price.
                         if(!priceIsSentinel){
                             throw std::invalid_argument("Stop orders cannot specify a limit price!");
                         }

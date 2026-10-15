@@ -15,10 +15,6 @@
 
 class MatchingEngine{
     public:
-        // STOP/STOP_LIMIT orders never touch the tradable book directly: they're parked in
-        // `pendingStopIds` until the market trades through their trigger, at which point
-        // checkStopTriggers() converts and submits them (STOP -> MARKET, STOP_LIMIT -> LIMIT).
-        // `stopPrice` is ignored for MARKET/LIMIT orders.
         std::vector<Trade> addOrder(Ticker ticker, OrderType orderType, OrderId orderId, Side side, Price price, Quantity qty, TimeInForce timeInForce, Price stopPrice = Constants::InvalidPrice){
             if(orders.contains(orderId)){
                 throw std::invalid_argument("addOrder: duplicate order id");
@@ -82,17 +78,17 @@ class MatchingEngine{
                 trades.push_back(trade);
 
                 if(buyOrder->isFilled()){
-                    orderbook.removeOrder(buyOrder);
-                    orders.erase(buyOrder->getOrderId());
                     orderIdToTicker.erase(buyOrder->getOrderId());
                     insertionSeq.erase(buyOrder->getOrderId());
+                    orderbook.removeOrder(buyOrder);
+                    orders.erase(buyOrder->getOrderId());
                 }
 
                 if(sellOrder->isFilled()){
                     orderbook.removeOrder(sellOrder);
-                    orders.erase(sellOrder->getOrderId());
                     orderIdToTicker.erase(sellOrder->getOrderId());
                     insertionSeq.erase(sellOrder->getOrderId());
+                    orders.erase(sellOrder->getOrderId());
                 }
             }
 
@@ -112,8 +108,6 @@ class MatchingEngine{
         }
 
     private:
-
-
         std::vector<Trade> submitLiveOrder(Ticker ticker, OrderType orderType, OrderId orderId, Side side, Price price, Quantity qty, TimeInForce timeInForce){
             Orderbook& orderbook = orderbooks.at(ticker);
 
@@ -136,9 +130,9 @@ class MatchingEngine{
 
             if(leftoverMustNotRest && !order.isFilled()){
                 orderbook.removeOrder(&order);
-                orders.erase(orderId);
                 orderIdToTicker.erase(orderId);
                 insertionSeq.erase(orderId);
+                orders.erase(orderId);
             }
 
             return trades;
@@ -146,12 +140,11 @@ class MatchingEngine{
 
         bool isStopTriggered(Ticker ticker, const Order& stopOrder) const{
             auto it = lastTradePrice.find(ticker);
-            if(it == lastTradePrice.end()) return false; // nothing has traded yet, nothing to trigger against
+            if(it == lastTradePrice.end()) return false;
 
             Price last = it->second;
             Price trigger = stopOrder.getStopPrice();
 
-            // A buy-stop triggers on the way up, a sell-stop triggers on the way down.
             return (stopOrder.getSide() == Side::BUY) ? (last >= trigger) : (last <= trigger);
         }
 
